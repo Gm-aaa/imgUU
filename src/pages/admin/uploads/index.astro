@@ -1,0 +1,143 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+const { user  } = Astro.locals;
+if (user === null) {
+  return Astro.redirect("/login");
+}
+---
+
+<AdminLayout title="ImgUU Admin">
+  <div class="bg-gray-900" x-data="getData()">
+    <div class="mx-auto">
+      <div class="bg-gray-900 py-1">
+        <div class="px-4 sm:px-6 lg:px-8">
+          <div class="sm:flex sm:items-center">
+            <div class="sm:flex-auto">
+              <h1 class="text-base font-semibold leading-6 text-white">Uploads</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <template x-if="records">
+      <div class="mx-auto">
+        <div class="bg-gray-900 py-3">
+          <div class="px-4 sm:px-6 lg:px-8">
+            <div class="mt-8 flow-root">
+              <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead>
+                      <tr>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">Id</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">OriginalFilename</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">StoredFilename</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">ImageUrl</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">ImageType</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">ImageSize</a></th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-100"><a href="#" class="group inline-flex">Actions</a></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="record in records" :key="record.id">
+                        <tr>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.id"></td>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.original_filename"></td>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.stored_filename"></td>
+                          <td class="whitespace-nowrap px-3 py-4 w-30 h-30"><img x-bind:src="record.file_url" class="w-full h-full object-cover"/></td>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.file_type"></td>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.file_size"></td>
+                          <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-0">
+                            <button class="text-indigo-400 hover:text-indigo-300" @click="copyToClipboard(record.file_url)">CopyUrl</button>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="px-4 sm:px-6 lg:px-8 mt-4">
+            <nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
+              <div class="-mt-px flex w-0 flex-1">
+                <button class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-300" type="button" x-model="previousPage" @click="fetchData(previousPage)" :disabled="doesNotHasPreviousPage">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="mr-3 h-5 w-5 text-gray-400"><path fill-rule="evenodd" d="M18 10a.75.75 0 0 1-.75.75H4.66l2.1 1.95a.75.75 0 1 1-1.02 1.1l-3.5-3.25a.75.75 0 0 1 0-1.1l3.5-3.25a.75.75 0 1 1 1.02 1.1l-2.1 1.95h12.59A.75.75 0 0 1 18 10Z" clip-rule="evenodd"></path></svg>
+                  Previous
+                </button>
+                <button class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-300" type="button" x-text="1" @click="fetchData(1)"></button>
+              </div>
+              <div class="hidden md:-mt-px md:flex">
+                <button class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium hover:border-gray-300 hover:text-gray-300border-indigo-500 text-indigo-600" type="button" x-text="page">1</button>
+              </div>
+              <div class="-mt-px flex w-0 flex-1 justify-end">
+                <button class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-300" type="button" x-model="lastPage" x-text="lastPage" @click="fetchData(lastPage)"></button>
+                <button class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-300" type="button" x-model="nextPage" @click="fetchData(nextPage)" :disabled="doesNotHasNextPage">
+                  Next
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="ml-3 h-5 w-5 text-gray-400"><path fill-rule="evenodd" d="M2 10a.75.75 0 0 1 .75-.75h12.59l-2.1-1.95a.75.75 0 1 1 1.02-1.1l3.5 3.25a.75.75 0 0 1 0 1.1l-3.5 3.25a.75.75 0 1 1-1.02-1.1l2.1-1.95H2.75A.75.75 0 0 1 2 10Z" clip-rule="evenodd"></path></svg>
+                </button>
+              </div>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+  
+  
+</AdminLayout>
+
+
+<script type="text/javascript">
+  function getData() {
+    return {
+      init() {
+        this.fetchData();
+      },
+      searchValue: "",
+      page: 1,
+      limit: 10,
+      total: 1,
+      records: null,
+      isLoading: false,
+      doesNotHasPreviousPage: true, 
+      previousPage: 1,
+      doesNotHasNextPage: true,
+      nextPage: null,
+      lastPage: 0,
+      fetchData(page = this.page) {
+        this.page = page;
+        this.isLoading = true;
+        fetch(`/api/uploads?page=${this.page}&limit=${this.limit}`)
+          .then((res) => res.json())
+          .then((d) => {
+            const data = d.data
+            this.isLoading = false;
+            this.records = data.records;
+            this.total = data.total
+            this.previousPage = this.page == 1 ? this.previousPage : this.page - 1;
+            this.doesNotHasPreviousPage = this.page==1
+            this.nextPage = this.page + 1;
+            this.lastPage = data.totalPages;
+            this.doesNotHasNextPage = this.lastPage == this.page
+          });
+      },
+      async copyToClipboard(text){
+        try {
+          await navigator.clipboard.writeText(text);
+          Toastify({
+            text: "Copy Succeed",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#22c55e",
+          }).showToast();
+        } catch (err) {
+          console.error('Failed to copy: ', err);
+        }
+      }
+    };
+  }
+
+</script>

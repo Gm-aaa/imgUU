@@ -1,0 +1,142 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import * as storageSql from "@/sql/storageSql"
+const { user  } = Astro.locals;
+if (user === null) {
+  return Astro.redirect("/login");
+}
+const { MY_DB } = Astro.locals.runtime.env;
+
+const storage = await storageSql.selectStorageByUserIdSql(MY_DB, user.id);
+
+let storageConfig = null
+if (storage) {
+  storageConfig = JSON.parse(storage.config)
+}
+const errors = { accountId: "", accessKeyId: "", secretAccessKey: "", bucketName: "" };
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const accountId = formData.get("accountId");
+  if (typeof accountId !== "string" || accountId.length < 1) {
+    errors.accountId += "Account ID is required.";
+  }
+  const accessKeyId = formData.get("accessKeyId");
+  if (typeof accessKeyId !== "string" || accessKeyId.length < 1) {
+    errors.accessKeyId += "Access Key ID is required.";
+  }
+  const secretAccessKey = formData.get("secretAccessKey") as string;
+  if (typeof secretAccessKey !== "string" || secretAccessKey.length < 1) {
+    errors.secretAccessKey += "Secret Access Key is required.";
+  }
+  const bucketName = formData.get("bucketName") as string;
+  if (typeof bucketName !== "string" || bucketName.length < 1) {
+    errors.bucketName += "Bucket Name is required.";
+  }
+  
+  try {
+    const hasErrors = Object.values(errors).some(msg => msg)
+    if (!hasErrors) {
+      storageConfig = {accountId, accessKeyId, secretAccessKey, bucketName}
+      if (storage === null) {
+        await storageSql.insertStorageSql(MY_DB, user.id, "r2", bucketName, JSON.stringify(storageConfig));
+      }else {
+        await storageSql.updateStorageSql(MY_DB, storage.id, user.id, "r2", bucketName, JSON.stringify(storageConfig));
+      }
+      return Astro.redirect("/admin/storage-config");
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+  }
+}
+---
+
+<AdminLayout title="ImgUU Admin">
+  <form method="post">
+    <div class="space-y-12 mx-auto max-w-7xl">
+      <div class="border-b border-white/10 pb-12">
+        <h2 class="text-base font-semibold leading-7 text-white">
+          StorageConfig(Cloudflare R2)
+        </h2>
+  
+        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+          <div class="sm:col-span-4">
+            <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  accountId <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="accountId" id="accountId" value={storageConfig?.accountId}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder="" required
+                    />
+                  </div>
+                  {errors.accountId && <p class="mt-2 text-sm text-red-500">{errors.accountId}</p>}
+                </div>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  accessKeyId <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="accessKeyId" id="accessKeyId" value={storageConfig?.accessKeyId}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder="" required
+                    />
+                  </div>
+                </div>
+                {errors.accessKeyId && <p class="mt-2 text-sm text-red-500">{errors.accessKeyId}</p>}
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  secretAccessKey <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="secretAccessKey" id="secretAccessKey" value={storageConfig?.secretAccessKey}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder="" required
+                    />
+                  </div>
+                </div>
+                {errors.secretAccessKey && <p class="mt-2 text-sm text-red-500">{errors.secretAccessKey}</p>}
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  bucketName <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="bucketName" id="bucketName" value={storageConfig?.bucketName}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder="" required
+                    />
+                  </div>
+                </div>
+                {errors.bucketName && <p class="mt-2 text-sm text-red-500">{errors.bucketName}</p>}
+              </div>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-end gap-x-6">
+              <button type="submit" class="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>  
+</AdminLayout>

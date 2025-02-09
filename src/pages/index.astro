@@ -1,0 +1,352 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import type { Website } from "@/types";
+import { queryWebsiteListByUserId } from '@/lib/service/websiteService';
+const { env } = Astro.locals.runtime;
+const user = Astro.locals.user
+let websites: Website[] = [];
+if (user){
+  websites = await queryWebsiteListByUserId(env.MY_DB, user.id)
+}
+---
+
+<Layout title="Welcome to Astro." bodyClass="bg-blue-100 min-h-screen flex flex-col items-center p-4">
+  <Header user={user} />
+  <div x-data="fileUpload()" class="bg-white rounded-lg shadow-md p-6 w-full max-w-7xl" >
+    <div class="flex justify-center items-center mb-4"> 
+      <h1 class="text-2xl font-bold text-center">Image Uploader</h1> 
+    </div>
+    <div class="mt-[30px] w-9/10 sm:w-9/10 md:w-9/10 lg:w-9/10 xl:w-4/5 2xl:w-4/5 mx-auto"> 
+      <label for="websiteId" class="block mb-2 font-semibold">Website:</label> 
+      <select x-model="websiteId" class="w-full max-w-5xl p-2 border rounded">
+        <option value="">Select a website</option>
+        { websites &&
+          websites.map((bucket) => {
+            return (
+              <option value={bucket.id}>{bucket.domain}</option>
+            )
+          })
+        }
+      </select> 
+    </div>
+
+
+    <!-- Main Content -->
+    <main class="mt-[30px] w-9/10 sm:w-9/10 md:w-9/10 lg:w-9/10 xl:w-4/5 2xl:w-4/5 mx-auto" x-on:drop.prevent="handleDropPrevent($event)" x-on:dragover.prevent x-on:paste="handlePaste($event)">
+      
+      <!-- Upload Area -->
+      <div class="border-2 border-dashed border-slate-400 rounded-md relative min-h-[240px]">
+        <div class="flex flex-wrap gap-3">
+          <!-- Loading Overlay -->
+          <div x-show="uploading" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+            <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-white"></div>
+          </div>
+
+          <!-- File Preview -->
+          <template x-for="(file, index) in selectedFiles" :key="index">
+            <div class="relative rounded-2xl w-44 h-48 ring-offset-2 ring-2 mx-3 my-3 flex flex-col items-center">
+              <div class="relative w-36 h-36" @click="handleImageClick(index)">
+                <img x-show="file.type.startsWith('image/')" :src="URL.createObjectURL(file)" class="w-full h-full object-cover" />
+                <video x-show="file.type.startsWith('video/')" :src="URL.createObjectURL(file)" controls class="w-full h-full"></video>
+                <div x-show="!file.type.startsWith('image/') && !file.type.startsWith('video/')" class="flex items-center justify-center w-full h-full bg-gray-200 text-gray-700">
+                  <p x-text="file.name"></p>
+                </div>
+              </div>
+              <div class="flex flex-row items-center justify-center w-full mt-3">
+                <button class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer mx-3" @click="handleImageClick(index)">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer mx-2" @click="handleRemoveImage(index)">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+                <button class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer mx-2" @click="handleUpload(file)">
+                  <i class="fas fa-upload"></i>
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Empty State -->
+          <div x-show="selectedFiles.length === 0" class="absolute left-0 top-0 w-full h-full flex items-center justify-center">
+            <div class="text-gray-500">拖拽文件到这里或将屏幕截图复制并粘贴到此处上传</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="w-full rounded-md shadow-sm overflow-hidden mt-4 grid grid-cols-8">
+        <div class="md:col-span-1 col-span-8">
+          <label for="file-upload" class="w-full h-10 bg-blue-500 cursor-pointer flex items-center justify-center text-white">
+            <i class="fas fa-images mr-2"></i>
+            选择图片
+          </label>
+          <input id="file-upload" type="file" class="hidden" @change="handleFileChange" multiple />
+        </div>
+        <div class="md:col-span-5 col-span-8">
+          <div class="w-full h-10 bg-slate-200 leading-10 px-4 text-center md:text-left">
+            已选择 <span x-text="selectedFiles.length"></span> 张，共 <span x-text="getTotalSizeInMB()"></span> M
+          </div>
+        </div>
+        <div class="md:col-span-1 col-span-3">
+          <div class="w-full bg-red-500 cursor-pointer h-10 flex items-center justify-center text-white" @click="handleClear">
+            <i class="fas fa-trash-alt mr-2"></i>
+            清除
+          </div>
+        </div>
+        <div class="md:col-span-1 col-span-5">
+          <div class="w-full bg-green-500 cursor-pointer h-10 flex items-center justify-center text-white" :class="{'pointer-events-none opacity-50': uploading}" @click="handleUpload()">
+            <i class="fas fa-upload mr-2"></i>
+            上传
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="w-full mt-4 min-h-[200px] mb-[60px]" x-show="uploadedImages.length > 0">
+        <!-- Tabs -->
+        <div class="flex flex-wrap gap-3 mb-4 border-b border-gray-300">
+          <button @click="activeTab = 'preview'" :class="{'bg-blue-500 text-white': activeTab === 'preview', 'bg-gray-200 text-gray-800': activeTab !== 'preview'}" class="px-4 py-2">Preview</button>
+          <button @click="activeTab = 'htmlLinks'" :class="{'bg-blue-500 text-white': activeTab === 'htmlLinks', 'bg-gray-200 text-gray-800': activeTab !== 'htmlLinks'}" class="px-4 py-2">HTML</button>
+          <button @click="activeTab = 'markdownLinks'" :class="{'bg-blue-500 text-white': activeTab === 'markdownLinks', 'bg-gray-200 text-gray-800': activeTab !== 'markdownLinks'}" class="px-4 py-2">Markdown</button>
+          <button @click="activeTab = 'bbcodeLinks'" :class="{'bg-blue-500 text-white': activeTab === 'bbcodeLinks', 'bg-gray-200 text-gray-800': activeTab !== 'bbcodeLinks'}" class="px-4 py-2">BBCode</button>
+          <button @click="activeTab = 'viewLinks'" :class="{'bg-blue-500 text-white': activeTab === 'viewLinks', 'bg-gray-200 text-gray-800': activeTab !== 'viewLinks'}" class="px-4 py-2">Links</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div x-show="activeTab === 'preview'" class="flex flex-col">
+          <template x-for="(image, index) in uploadedImages" :key="index">
+            <div class="m-2 rounded-2xl ring-offset-2 ring-2 ring-slate-100 flex flex-row">
+              <img :src="image.url" class="object-cover w-36 h-40 m-2" />
+              <div class="flex flex-col justify-center w-4/5">
+                <input :value="image.url" readonly @click="handleCopy(image.url)" class="px-3 my-1 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-800 focus:outline-none placeholder-gray-400" />
+                <input :value="'![' + image.name + '](' + image.url + ')'" readonly @click="handleCopy('![' + image.name + '](' + image.url + ')')" class="px-3 my-1 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-800 focus:outline-none placeholder-gray-400" />
+                <input :value="'<a href=&quot;' + image.url + '&quot; target=&quot;_blank&quot;><img src=&quot;' + image.url + '&quot;></a>'" readonly @click="handleCopy('<a href=&quot;' + image.url + '&quot; target=&quot;_blank&quot;><img src=&quot;' + image.url + '&quot;></a>')" class="px-3 my-1 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-800 focus:outline-none placeholder-gray-400" />
+                <input :value="'[img]' + image.url + '[/img]'" readonly @click="handleCopy('[img]' + image.url + '[/img]')" class="px-3 my-1 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-800 focus:outline-none placeholder-gray-400" />
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="activeTab === 'htmlLinks'" class="p-4 bg-slate-100" @click="handleCopyCode">
+          <template x-for="(image, index) in uploadedImages" :key="index">
+            <div class="mb-2">
+              <code x-text="'<img src=&quot;' + image.url + '&quot; alt=&quot;' + image.name + '&quot; />'"></code>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="activeTab === 'markdownLinks'" class="p-4 bg-slate-100" @click="handleCopyCode">
+          <template x-for="(image, index) in uploadedImages" :key="index">
+            <div class="mb-2">
+              <code x-text="'![' + image.name + '](' + image.url + ')'"></code>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="activeTab === 'bbcodeLinks'" class="p-4 bg-slate-100" @click="handleCopyCode">
+          <template x-for="(image, index) in uploadedImages" :key="index">
+            <div class="mb-2">
+              <code x-text="'[img]' + image.url + '[/img]'"></code>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="activeTab === 'viewLinks'" class="p-4 bg-slate-100" @click="handleCopyCode">
+          <template x-for="(image, index) in uploadedImages" :key="index">
+            <div class="mb-2">
+              <code x-text="image.url"></code>
+            </div>
+          </template>
+        </div>
+      </div>
+    </main>
+
+    <!-- Image Preview Modal -->
+    <div x-show="selectedImage" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="handleCloseImage">
+      <div class="relative flex flex-col items-center justify-between">
+        <button class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center" @click="handleCloseImage"> &times; </button>
+        <img x-show="boxType === 'img'" :src="selectedImage" class="object-cover w-9/10 h-auto rounded-lg" />
+        <video x-show="boxType === 'video'" :src="selectedImage" class="object-cover w-9/10 h-auto rounded-lg" controls></video>
+        <div x-show="boxType === 'other'" class="p-4 bg-white text-black rounded">
+          <p>Unsupported file type</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<script type="text/javascript">
+  function fileUpload() {
+    return {
+      selectedFiles: [],
+      uploadedImages: [],
+      uploadedFilesNum: 0,
+      selectedImage: null,
+      activeTab: "preview",
+      uploading: false,
+      websiteId: "",
+      boxType: "img",
+      handleFileChange(event) {
+        const newFiles = Array.from(event.target.files);
+        const filteredFiles = newFiles.filter((file) => !this.selectedFiles.find((selFile) => selFile.name === file.name));
+        const uniqueFiles = filteredFiles.filter((file) => !this.uploadedImages.find((upImg) => upImg.name === file.name));
+        this.selectedFiles = [...this.selectedFiles, ...uniqueFiles];
+      },
+
+      handleClear() {
+        this.selectedFiles = [];
+      },
+
+      getTotalSizeInMB() {
+        const totalSizeInBytes = this.selectedFiles.reduce((acc, file) => acc + file.size, 0);
+        return (totalSizeInBytes / (1024 * 1024)).toFixed(2);
+      },
+
+      async handleUpload(file = null) {
+        if (this.websiteId === "") {
+          Toastify({
+            text: "请先登陆设置上传接口",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+          return;
+        }
+
+        this.uploading = true;
+        const filesToUpload = file ? [file] : this.selectedFiles;
+
+        if (filesToUpload.length === 0) {
+          Toastify({
+            text: "请选择要上传的文件",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+          this.uploading = false;
+          return;
+        }
+
+        // Simulated upload - in real implementation, you'd send to a server
+        for (const file of filesToUpload) {
+          // Simulate server response with a local URL
+          //
+          let url = ""
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("websiteId", this.websiteId);
+            const response = await fetch("/api/upload", {
+              method: 'POST',
+              body: formData
+            });
+            if (response.ok) {
+              const data = await response.json();
+              if(data.success){
+                url = data.imageUrl
+                url = url.replace("https://imgs.kkshare.net", "https://imgs.imguu.net")
+              }
+            }else{
+              Toastify({
+                text: `uplodad error ${response.statusText}`,
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "#ef4444",
+              }).showToast();
+            }
+          }catch(e) {
+            console.log(e)
+          }
+          if (url) {
+            file.url = url
+            this.uploadedImages.push(file);
+            this.selectedFiles = this.selectedFiles.filter((f) => f !== file);
+          }
+        }
+
+        this.uploading = false;
+        Toastify({
+          text: `已成功上传 ${filesToUpload.length} 张图片`,
+          duration: 3000,
+          close: true,
+          gravity: "top",
+          position: "right",
+          backgroundColor: "#22c55e",
+        }).showToast();
+      },
+
+      handleImageClick(index) {
+        const file = this.selectedFiles[index];
+        if (file.type.startsWith("image/")) {
+          this.boxType = "img";
+        } else if (file.type.startsWith("video/")) {
+          this.boxType = "video";
+        } else {
+          this.boxType = "other";
+        }
+        this.selectedImage = URL.createObjectURL(file);
+      },
+
+      handleCloseImage() {
+        this.selectedImage = null;
+      },
+
+      handleRemoveImage(index) {
+        this.selectedFiles = this.selectedFiles.filter((_, idx) => idx !== index);
+      },
+      handleDropPrevent(event) {
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+          const filteredFiles = Array.from(files).filter((file) => file.type.startsWith("image/"))
+          .filter((file) => !this.selectedFiles.find((selFile) => selFile.name === file.name));
+          this.selectedFiles = [...this.selectedFiles, ...filteredFiles];
+        }
+      },
+      handlePaste(event) {
+        const items = event.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === "file" && item.type.startsWith("image/")) {
+            if (this.selectedFiles.find((selFile) => selFile.name === item.name)) {
+              continue;
+            }
+            const file = item.getAsFile();
+            this.selectedFiles = [...this.selectedFiles, file];
+          }
+        }
+      },
+
+      async handleCopy(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          Toastify({
+            text: "链接复制成功",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#22c55e",
+          }).showToast();
+        } catch (err) {
+          Toastify({
+            text: "链接复制失败",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+        }
+      },
+    };
+  }
+</script>

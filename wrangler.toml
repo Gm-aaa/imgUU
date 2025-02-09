@@ -1,0 +1,13 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "imguu"
+compatibility_date = "2023-05-18"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
+
+
+# Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
+# Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
+[[d1_databases]]
+binding = "MY_DB"
+database_name = "imageuu"
+database_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

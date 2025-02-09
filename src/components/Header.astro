@@ -1,0 +1,23 @@
+---
+const { user } = Astro.props;
+---
+
+<div class="bg-white w-full max-w-7xl mb-4 p-4 rounded-lg shadow-md flex justify-between items-center">
+  <a href="/" class="text-2xl font-bold text-blue-600 hover:text-blue-800">ImgUU</a> 
+  <div class="text-center">
+    {
+      !user && (
+        <a href="/login">
+          <button class="px-4 py-2 mx-2 w-28 sm:w-28 md:w-20 lg:w-16 xl:w-16 2xl:w-20 bg-blue-500 text-white rounded cursor-pointer">Login</button>
+        </a>
+      )
+    }
+    {
+      user && (
+        <a href="/admin">
+          <button class="px-4 py-2 mx-2 w-28 sm:w-28 md:w-20 lg:w-16 xl:w-16 2xl:w-20 bg-blue-500 text-white rounded cursor-pointer">Admin</button>
+        </a>
+      )
+    }
+  </div>
+</div>

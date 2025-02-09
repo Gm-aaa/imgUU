@@ -1,0 +1,21 @@
+---
+import '@/styles/global.css'
+const { title, bodyClass } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+		<title>{title}</title>
+	</head>
+	<body class={bodyClass}>
+		<slot />
+	</body>
+</html>

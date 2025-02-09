@@ -1,0 +1,15 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+
+if (Astro.locals.user === null) {
+  return Astro.redirect("/login");
+}
+
+const data = Astro.locals;
+
+const { user } = Astro.locals;
+---
+
+<AdminLayout title="ImgUU Admin">
+  <h1 class="text-3xl font-bold">Welcome: {user.username}</h1>
+</AdminLayout>
