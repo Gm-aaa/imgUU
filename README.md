@@ -26,7 +26,7 @@ This project is an open-source image upload tool designed to help users easily u
 | Upload website config     | ✅     | ✅     |
 | Storage config      | ✅     | ✅     |
 | Upload records    | ✅     | ✅     |
-| Convert to WebP    | ✅     | ❌     |
+| Convert to WebP    | ❌     | ✅     |
 
 
 ## Getting Started
