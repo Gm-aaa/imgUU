@@ -13,6 +13,7 @@ const { MY_DB } = Astro.locals.runtime.env;
 interface FormDataValues {
   domain?: string;
   pathTemplate?: string;
+  cdnDomain?: string;
   storageConfigId?: number;
 }
 
@@ -36,10 +37,7 @@ if (Astro.request.method === "POST") {
   if (!checkDomain(domain)) {
     errors.domain += "Domain is invalid.";
   }
-  // const cdnDomain = formData.get("cdnDomain") as string;
-  // if (typeof cdnDomain !== "string" || cdnDomain.length < 1) {
-  //   errors.cdnDomain += "CDN Domain is required.";
-  // }
+  const cdnDomain = formData.get("cdnDomain") as string;
   let pathTemplate = formData.get("pathTemplate") as string;
   if (typeof pathTemplate !== "string" || pathTemplate.length < 1) {
     errors.pathTemplate += "pathTemplate is required.";
@@ -57,7 +55,7 @@ if (Astro.request.method === "POST") {
           userId: user.id,
           storageId: Number(storageConfigId),
           domain: domain,
-          cdnDomain: "",
+          cdnDomain: cdnDomain,
           pathTemplate: pathTemplate,
         }
         await websiteSql.insertWebsiteSql(MY_DB,newWebsite);
@@ -67,7 +65,7 @@ if (Astro.request.method === "POST") {
           userId: user.id,
           storageId: Number(storageConfigId),
           domain: domain,
-          cdnDomain: "",
+          cdnDomain: cdnDomain,
           pathTemplate: pathTemplate,
         }
         await websiteSql.updateWebsiteSql(MY_DB, updateWebsite);
@@ -127,23 +125,6 @@ if (Astro.request.method === "POST") {
                 </div>
               </div>
             </div>
-            <!-- <div class="mt-4">
-              <div class="sm:col-span-4">
-                <label  class="block text-sm font-medium leading-6 text-white">
-                  CDN Domain
-                </label>
-                <div class="mt-2">
-                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
-                    <input type="text"  name="cdnDomain" id="cdnDomain" value={website?.cdnDomain}
-                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
-                      placeholder=""
-                    />
-                  </div>
-                </div>
-                {errors.cdnDomain && <p class="mt-2 text-sm text-red-500">{errors.cdnDomain}</p>}
-              </div>
-            </div> -->
-
             <div class="mt-4">
               <div class="sm:col-span-4">
                 <label  class="block text-sm font-medium leading-6 text-white">
@@ -158,6 +139,22 @@ if (Astro.request.method === "POST") {
                   </div>
                 </div>
                 {errors.pathTemplate && <p class="mt-2 text-sm text-red-500">{errors.pathTemplate}</p>}
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  CDN Template
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="cdnDomain" id="cdnDomain" value={formDataValues.cdnDomain ||website?.cdn_domain}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder="like: https://cdn.example.com/{year}/{month}/{day}/{md5}.{extName}"
+                    />
+                  </div>
+                </div>
+                {errors.cdnDomain && <p class="mt-2 text-sm text-red-500">{errors.cdnDomain}</p>}
               </div>
             </div>
             <div class="mt-6 flex items-center justify-end gap-x-6">

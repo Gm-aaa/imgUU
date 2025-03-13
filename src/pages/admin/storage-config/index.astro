@@ -13,34 +13,57 @@ let storageConfig = null
 if (storage) {
   storageConfig = JSON.parse(storage.config)
 }
-const errors = { accountId: "", accessKeyId: "", secretAccessKey: "", bucketName: "" };
+const errors = { provider: "", accountId: "", accessKeyId: "", secretAccessKey: "", bucketName: "", bucketHost: "", bucketApiKey:"" };
+
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
-  const accountId = formData.get("accountId");
-  if (typeof accountId !== "string" || accountId.length < 1) {
-    errors.accountId += "Account ID is required.";
+  const provider = formData.get("provider") as string;
+  if (typeof provider !== "string" || provider.length < 1) {
+    errors.provider += "Provider is required.";
   }
-  const accessKeyId = formData.get("accessKeyId");
-  if (typeof accessKeyId !== "string" || accessKeyId.length < 1) {
-    errors.accessKeyId += "Access Key ID is required.";
-  }
-  const secretAccessKey = formData.get("secretAccessKey") as string;
-  if (typeof secretAccessKey !== "string" || secretAccessKey.length < 1) {
-    errors.secretAccessKey += "Secret Access Key is required.";
+  if (["r2", "imguu"].indexOf(provider) === -1) {
+    errors.provider += "Invalid provider.";
   }
   const bucketName = formData.get("bucketName") as string;
   if (typeof bucketName !== "string" || bucketName.length < 1) {
     errors.bucketName += "Bucket Name is required.";
   }
+
+  if (provider == "r2") {
+    const accountId = formData.get("accountId");
+    if (typeof accountId !== "string" || accountId.length < 1) {
+      errors.accountId += "Account ID is required.";
+    }
+    const accessKeyId = formData.get("accessKeyId");
+    if (typeof accessKeyId !== "string" || accessKeyId.length < 1) {
+      errors.accessKeyId += "Access Key ID is required.";
+    }
+    const secretAccessKey = formData.get("secretAccessKey") as string;
+    if (typeof secretAccessKey !== "string" || secretAccessKey.length < 1) {
+      errors.secretAccessKey += "Secret Access Key is required.";
+    }
+    storageConfig =  {accountId, accessKeyId, secretAccessKey, bucketName}
+  }
+  if (provider == "imguu") {
+    const bucketHost = formData.get("bucketHost");
+    if (typeof bucketHost !== "string" || bucketHost.length < 1) {
+      errors.bucketHost += "bucketHost is required.";
+    }
+    const bucketApiKey = formData.get("bucketApiKey") as string;
+    if (typeof bucketApiKey !== "string" || bucketApiKey.length < 1) {
+      errors.bucketApiKey += "Bucket Access Key is required.";
+    }
+    storageConfig =  {bucketHost, bucketApiKey, bucketName}
+  }
+  
   
   try {
     const hasErrors = Object.values(errors).some(msg => msg)
     if (!hasErrors) {
-      storageConfig = {accountId, accessKeyId, secretAccessKey, bucketName}
       if (storage === null) {
-        await storageSql.insertStorageSql(MY_DB, user.id, "r2", bucketName, JSON.stringify(storageConfig));
+        await storageSql.insertStorageSql(MY_DB, user.id, provider, bucketName, JSON.stringify(storageConfig));
       }else {
-        await storageSql.updateStorageSql(MY_DB, storage.id, user.id, "r2", bucketName, JSON.stringify(storageConfig));
+        await storageSql.updateStorageSql(MY_DB, storage.id, user.id, provider, bucketName, JSON.stringify(storageConfig));
       }
       return Astro.redirect("/admin/storage-config");
     }
@@ -57,12 +80,29 @@ if (Astro.request.method === "POST") {
     <div class="space-y-12 mx-auto max-w-7xl">
       <div class="border-b border-white/10 pb-12">
         <h2 class="text-base font-semibold leading-7 text-white">
-          StorageConfig(Cloudflare R2)
+          StorageConfig
         </h2>
   
         <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
           <div class="sm:col-span-4">
             <div class="mt-4">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  Provider <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <select name="provider" id="provider" class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6">
+                      <option value="r2" class="text-black" selected={storage?.provider === 'r2'}>R2</option>
+                      <option value="imguu" class="text-black" selected={storage?.provider === 'imguu'}>ImgUU Bucket</option>
+                    </select>
+                  </div>
+                  {errors.provider && <p class="mt-2 text-sm text-red-500">{errors.provider}</p>}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 r2" style="display: block;">
               <div class="sm:col-span-4">
                 <label  class="block text-sm font-medium leading-6 text-white">
                   accountId <span class="text-red-500">*</span>
@@ -71,14 +111,14 @@ if (Astro.request.method === "POST") {
                   <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
                     <input type="text"  name="accountId" id="accountId" value={storageConfig?.accountId}
                       class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
-                      placeholder="" required
+                      placeholder=""
                     />
                   </div>
                   {errors.accountId && <p class="mt-2 text-sm text-red-500">{errors.accountId}</p>}
                 </div>
               </div>
             </div>
-            <div class="mt-4">
+            <div class="mt-4 r2" style="display: block;">
               <div class="sm:col-span-4">
                 <label  class="block text-sm font-medium leading-6 text-white">
                   accessKeyId <span class="text-red-500">*</span>
@@ -95,7 +135,7 @@ if (Astro.request.method === "POST") {
               </div>
             </div>
 
-            <div class="mt-4">
+            <div class="mt-4 r2" style="display: block;">
               <div class="sm:col-span-4">
                 <label  class="block text-sm font-medium leading-6 text-white">
                   secretAccessKey <span class="text-red-500">*</span>
@@ -109,6 +149,40 @@ if (Astro.request.method === "POST") {
                   </div>
                 </div>
                 {errors.secretAccessKey && <p class="mt-2 text-sm text-red-500">{errors.secretAccessKey}</p>}
+              </div>
+            </div>
+
+            <div class="mt-4 imguu" style="display: none;">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  bucketHost <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="bucketHost" id="bucketHost" value={storageConfig?.bucketHost}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder=""
+                    />
+                  </div>
+                </div>
+                {errors.bucketHost && <p class="mt-2 text-sm text-red-500">{errors.bucketHost}</p>}
+              </div>
+            </div>
+
+            <div class="mt-4 imguu" style="display: none;">
+              <div class="sm:col-span-4">
+                <label  class="block text-sm font-medium leading-6 text-white">
+                  bucketApiKey <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                  <div class="flex rounded-md bg-white/5 ring-1 ring-inset ring-white/10 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500">
+                    <input type="text"  name="bucketApiKey" id="bucketApiKey" value={storageConfig?.bucketApiKey}
+                      class="flex-1 border-0 bg-transparent py-1.5 pl-2 text-white focus:ring-0 sm:text-sm sm:leading-6"
+                      placeholder=""
+                    />
+                  </div>
+                </div>
+                {errors.bucketApiKey && <p class="mt-2 text-sm text-red-500">{errors.bucketApiKey}</p>}
               </div>
             </div>
 
@@ -140,3 +214,49 @@ if (Astro.request.method === "POST") {
     </div>
   </form>  
 </AdminLayout>
+
+<script is:inline>
+  const provider = document.getElementById('provider');
+  provider.addEventListener('change', function(e) {
+    const provider = e.target.value;
+    if (provider === 'r2') {
+      const r2divs =document.querySelectorAll('.r2');
+      r2divs.forEach((div) => {
+        div.style.display = 'block';
+      })
+      const imguudivs = document.querySelectorAll('.imguu');
+      imguudivs.forEach((div) => {
+        div.style.display = 'none';
+      })
+
+    } else if (provider === 'imguu') {
+      const r2divs =document.querySelectorAll('.r2');
+      r2divs.forEach((div) => {
+        div.style.display = 'none';
+      })
+      const imguudivs = document.querySelectorAll('.imguu');
+      imguudivs.forEach((div) => {
+        div.style.display = 'block';
+      })
+    }
+  });
+  if (provider.value === 'r2') {
+    const r2divs =document.querySelectorAll('.r2');
+    r2divs.forEach((div) => {
+      div.style.display = 'block';
+    })
+    const imguudivs = document.querySelectorAll('.imguu');
+    imguudivs.forEach((div) => {
+      div.style.display = 'none';
+    })
+  }else if (provider.value === 'imguu') {
+    const r2divs =document.querySelectorAll('.r2');
+    r2divs.forEach((div) => {
+      div.style.display = 'none';
+    })
+    const imguudivs = document.querySelectorAll('.imguu');
+    imguudivs.forEach((div) => {
+      div.style.display = 'block';
+    })
+  }
+</script>

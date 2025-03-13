@@ -27,6 +27,12 @@ export interface StorageR2Config {
 	bucketName: string;
 }
 
+export interface StorageImgUUConfig {
+	bucketHost: string;
+	bucketApiKey: string;
+	bucketName: string;
+}
+
 export interface Website{
 	id?: number;
 	userId: string;

@@ -1,10 +1,11 @@
 import type { APIContext } from "astro";
 import { getR2Bucket } from "@/lib/r2";
+import { getImgUUBucket } from "@/lib/imguu"
 import { checkNumber, createPath } from "@/lib/utils/commonutil";
 import * as websiteSql from "@/sql/websiteSql"
 import * as storageSql from "@/sql/storageSql"
 import * as uploadSql from "@/sql/uploadSql"
-import type { StorageR2Config, Upload } from "@/types";
+import type { StorageR2Config, StorageImgUUConfig, Upload } from "@/types";
 import { Buffer } from 'buffer';
 import { md5 } from 'js-md5';
 
@@ -48,35 +49,44 @@ export async function POST(context: APIContext): Promise<Response> {
     }
 
     let imageUrl = "";
-    let storageConfig: StorageR2Config = null;
+    const date = new Date();
+    const fileExt = `.${file.name.split('.').pop()}`;
+    const fileType = file.type;
+    const fileSize = file.size;
+    const arrayBuffer = await file.arrayBuffer();
+    const md5Hex = md5(arrayBuffer);
+
+    const imagePath = createPath(date, website.path_template, md5Hex, fileExt);
+    if (website.cdn_domain){
+      imageUrl = createPath(date, website.cdn_domain, md5Hex, fileExt);
+    }else{
+      imageUrl = `${website.domain}/${imagePath}`;
+    }
+    const buffer = Buffer.from(arrayBuffer);
     if(storage.provider == "r2") {
-      storageConfig = JSON.parse(storage.config);
+      const storageConfig: StorageR2Config = JSON.parse(storage.config);
       const bucket = getR2Bucket(storageConfig);
       if (!bucket) {
         return new Response(JSON.stringify({ error: "Failed to get storage" }), {
           status: 500,
         });
       }
-      const fileExt = `.${file.name.split('.').pop()}`;
-      const fileType = file.type;
-      const fileSize = file.size;
-      const arrayBuffer = await file.arrayBuffer();
-      const md5Hex = md5(arrayBuffer);
-      const imagePath = createPath(website.path_template, md5Hex, fileExt);
-      imageUrl = `${website.domain}/${imagePath}`;
-      const buffer = Buffer.from(arrayBuffer);
       await bucket.uploadFile(buffer, imagePath, fileType);
-      const upload: Upload = {
-        userId: user.id,
-        websiteId: Number(websiteId),
-        originalFilename: file.name,
-        storedFilename: imagePath,
-        fileType: fileType,
-        fileSize: fileSize,
-        fileUrl: imageUrl
-      }
-      await uploadSql.inserUploadSql(MY_DB, upload);
+    } else if (storage.provider == "imguu") {
+      const storageConfig: StorageImgUUConfig = JSON.parse(storage.config);
+      const bucket = getImgUUBucket(storageConfig);
+      await bucket.uploadFile(buffer, imagePath, fileType);
     }
+    const upload: Upload = {
+      userId: user.id,
+      websiteId: Number(websiteId),
+      originalFilename: file.name,
+      storedFilename: imagePath,
+      fileType: fileType,
+      fileSize: fileSize,
+      fileUrl: imageUrl
+    }
+    await uploadSql.inserUploadSql(MY_DB, upload);
 
     
     return new Response(

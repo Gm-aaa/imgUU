@@ -29,9 +29,8 @@ function getQueryParams(url: string, ...params: string[]): Record<string, string
 
 
 
-function createPath(pathTemplate: string, fileMd5: string, extName: string) {
+function createPath(date:Date, pathTemplate: string, fileMd5: string, extName: string) {
   // {year}/{month}/{day}/{md5}{extName} or custom/{md5}{extName}
-  const date = new Date();
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
