@@ -9,5 +9,8 @@ pages_build_output_dir = "./dist"
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
 [[d1_databases]]
 binding = "MY_DB"
-database_name = "imageuu"
-database_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+database_name = "imguu"
+database_id = "a42ef288-a2eb-4ec3-a89c-d371a528fed7"
+[[r2_buckets]]
+binding = "imguu"
+bucket_name = "r2image"
