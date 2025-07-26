@@ -13,8 +13,18 @@ export default defineConfig({
       enabled: true
     }
   }),
+  build: {
+    inlineStylesheets: 'never'
+  },
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: undefined
+        }
+      }
+    }
   },
   integrations: [ alpinejs(), mdx()]
 });

@@ -28,20 +28,67 @@ const rateLimitMiddleware = defineMiddleware((context, next) => {
 
 const authMiddleware = defineMiddleware(async (context, next) => {
   const { MY_DB } = context.locals.runtime.env;
-  const token = context.cookies.get("session")?.value ?? null;
-	if (token === null) {
+  
+  // 获取所有session cookie值
+  const cookieHeader = context.request.headers.get('cookie');
+  const allSessionTokens: string[] = [];
+  
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'session' && value) {
+        allSessionTokens.push(value);
+      }
+    }
+  }
+  
+  console.log(`[DEBUG] Request: ${context.url.pathname}, Found ${allSessionTokens.length} session tokens`);
+  console.log(`[DEBUG] All cookies:`, cookieHeader);
+  console.log(`[DEBUG] Session tokens:`, allSessionTokens);
+  
+	if (allSessionTokens.length === 0) {
+    console.log('[DEBUG] No session tokens found, setting user/session to null');
     context.locals.session = null;
     context.locals.user = null;
     return next();
   }
-  const { user, session } = await validateSessionToken(MY_DB, token);
-	if (session !== null) {
-		setSessionTokenCookie(context, token, session.expiresAt);
+  
+  // 尝试验证每个session token，找到第一个有效的
+  let validUser = null;
+  let validSession = null;
+  let validToken = null;
+  
+  for (const token of allSessionTokens) {
+    const { user, session } = await validateSessionToken(MY_DB, token);
+    if (session !== null && user !== null) {
+      validUser = user;
+      validSession = session;
+      validToken = token;
+      console.log(`[DEBUG] Found valid session token: ${token}`);
+      break;
+    }
+  }
+  
+  console.log(`[DEBUG] Session validation result:`, {
+    sessionExists: validSession !== null,
+    userExists: validUser !== null,
+    userId: validUser?.id,
+    username: validUser?.username,
+    sessionId: validSession?.id
+  });
+  
+	if (validSession !== null && validToken !== null) {
+		// Session有效，刷新cookie
+		setSessionTokenCookie(context, validToken, validSession.expiresAt);
+		console.log(`[DEBUG] Valid session found, cookie refreshed`);
 	} else {
+		// 所有Session都无效，清除所有cookie
+		console.log(`[DEBUG] No valid session tokens found, clearing all cookies`);
 		deleteSessionTokenCookie(context);
 	}
-	context.locals.session = session;
-	context.locals.user = user;
+	context.locals.session = validSession;
+	context.locals.user = validUser;
 	return next();
 });
 
@@ -67,8 +114,10 @@ const authMiddleware2 = defineMiddleware(async (context, next) => {
 	}
 	// 如果是未登录状态则重定向到登录页面
 	if (context.locals.session === null) {
+		console.log(`[DEBUG] No session found for protected route ${context.url.pathname}, redirecting to /login`);
 		return context.redirect("/login");
 	}
+	console.log(`[DEBUG] Access granted to ${context.url.pathname} for user ${context.locals.user?.username}`);
 	return next();	
 });
 

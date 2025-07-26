@@ -1,5 +1,5 @@
 import type { StorageR2Config } from '@/types';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 export function getR2Bucket(config: StorageR2Config): R2Upload {
   return new R2Upload(config);
@@ -84,6 +84,28 @@ class R2Upload {
       }
     } catch (error) {
       console.error('Error uploading file to R2:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 从 R2 存储删除文件
+   * @param key 文件在 R2 中的唯一标识符
+   */
+  async deleteFile(key: string): Promise<void> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      const response = await this.client.send(command);
+
+      if (response.$metadata.httpStatusCode !== 204) {
+        throw new Error('Delete failed');
+      }
+    } catch (error) {
+      console.error('Error deleting file from R2:', error);
       throw error;
     }
   }

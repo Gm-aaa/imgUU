@@ -48,7 +48,8 @@ if (user === null) {
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.file_type"></td>
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-300" x-text="record.file_size"></td>
                           <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-0">
-                            <button class="text-indigo-400 hover:text-indigo-300" @click="copyToClipboard(record.file_url)">CopyUrl</button>
+                            <button class="text-indigo-400 hover:text-indigo-300 mr-3" @click="copyToClipboard(record.file_url)">CopyUrl</button>
+                            <button class="text-red-400 hover:text-red-300" @click="deleteUpload(record.id)" :disabled="isDeleting">Delete</button>
                           </td>
                         </tr>
                       </template>
@@ -100,6 +101,7 @@ if (user === null) {
       total: 1,
       records: null,
       isLoading: false,
+      isDeleting: false,
       doesNotHasPreviousPage: true, 
       previousPage: 1,
       doesNotHasNextPage: true,
@@ -135,6 +137,48 @@ if (user === null) {
           }).showToast();
         } catch (err) {
           console.error('Failed to copy: ', err);
+        }
+      },
+      async deleteUpload(uploadId) {
+        if (!confirm('确定要删除这张图片吗？此操作不可撤销。')) {
+          return;
+        }
+        
+        this.isDeleting = true;
+        try {
+          const response = await fetch(`/api/delete-upload?id=${uploadId}`, {
+            method: 'DELETE'
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            Toastify({
+              text: "图片删除成功",
+              duration: 3000,
+              close: true,
+              gravity: "top",
+              position: "right",
+              backgroundColor: "#22c55e",
+            }).showToast();
+            
+            // 重新加载当前页面数据
+            this.fetchData(this.page);
+          } else {
+            throw new Error(result.error || '删除失败');
+          }
+        } catch (error) {
+          console.error('Delete error:', error);
+          Toastify({
+            text: `删除失败: ${error.message}`,
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+        } finally {
+          this.isDeleting = false;
         }
       }
     };

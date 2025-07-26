@@ -1,14 +1,14 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Header from "@/components/Header.astro";
-import Footer from "@/components/Footer.astro";
-import type { Website } from "@/types";
-import { queryWebsiteListByUserId } from '@/lib/service/websiteService';
-const { env } = Astro.locals.runtime;
-const user = Astro.locals.user
-let websites: Website[] = [];
-if (user){
-  websites = await queryWebsiteListByUserId(env.MY_DB, user.id)
+import Layout from '@/layouts/Layout.astro';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import * as websiteSql from '@/sql/websiteSql';
+
+const user = Astro.locals.user;
+let websites = [];
+if (user) {
+  const { MY_DB } = Astro.locals.runtime.env;
+  websites = await websiteSql.selectWebsiteByUserIdSql(MY_DB, user.id);
 }
 ---
 
@@ -208,7 +208,7 @@ if (user){
       async handleUpload(file = null) {
         if (this.websiteId === "") {
           Toastify({
-            text: "请先登陆设置上传接口",
+            text: "请先选择一个网站配置",
             duration: 3000,
             close: true,
             gravity: "top",

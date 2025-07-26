@@ -51,4 +51,29 @@ class ImguuUpload {
       throw error;
     }
   }
+
+  /**
+   * 从 imguu 存储删除文件
+   * @param key 文件路径
+   */
+  async deleteFile(key: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.bucketHost}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'X-API-Key': this.bucketApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: `/${key}` })
+      });
+
+      if (!response.ok) {
+        console.error('文件删除失败:', response.statusText);
+        throw new Error('Delete failed');
+      }
+    } catch (error) {
+      console.error('Error deleting file from imgUU:', error);
+      throw error;
+    }
+  }
 }

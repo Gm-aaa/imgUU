@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     oauth_id TEXT NOT NULL,
     email TEXT NOT NULL,
     username TEXT,
+    is_allowed INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

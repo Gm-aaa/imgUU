@@ -6,8 +6,11 @@ import * as sessionSql from "@/sql/sessionSql"
 
 export async function validateSessionToken(db : D1Database, token: string): Promise<SessionValidationResult> {
 	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
+	console.log(`[DEBUG] validateSessionToken - token: ${token}, sessionId: ${sessionId}`);
 	const row = await sessionSql.selectUserSessionBySessionIdSql(db, sessionId);
+	console.log(`[DEBUG] validateSessionToken - database query result:`, row);
 	if (row === null) {
+		console.log(`[DEBUG] validateSessionToken - no session found in database`);
 		return { session: null, user: null };
 	}
 	const session: Session = {
@@ -41,22 +44,64 @@ export async function invalidateUserSessions(db : D1Database, userId: string): P
 }
 
 export function setSessionTokenCookie(context: APIContext, token: string, expiresAt: Date): void {
+	console.log(`[DEBUG] Setting session cookie - token: ${token}, domain: ${context.url.hostname}`);
+	
+	// 强制清除所有可能的session cookie
+	context.cookies.delete("session", { path: "/" });
+	context.cookies.delete("session", { path: "/", domain: context.url.hostname });
+	context.cookies.delete("session", { path: "/", domain: `.${context.url.hostname}` });
+	
+	// 设置新的session cookie
 	context.cookies.set("session", token, {
 		httpOnly: true,
 		path: "/",
-		secure: import.meta.env.PROD,
+		secure: false,
 		sameSite: "lax",
 		expires: expiresAt
 	});
+	
+	// 通过Response header强制设置cookie作为备用方案
+	const cookieValue = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expiresAt.toUTCString()}`;
+	console.log(`[DEBUG] Force setting cookie via header: ${cookieValue}`);
 }
 
 export function deleteSessionTokenCookie(context: APIContext): void {
-	context.cookies.set("session", "", {
-		httpOnly: true,
+	console.log(`[DEBUG] Deleting session cookie for domain: ${context.url.hostname}`);
+	
+	// 尝试删除所有可能的cookie变体
+	context.cookies.delete("session", {
+		path: "/"
+	});
+	
+	context.cookies.delete("session", {
 		path: "/",
-		secure: import.meta.env.PROD,
-		sameSite: "lax",
-		maxAge: 0
+		domain: context.url.hostname
+	});
+	
+	context.cookies.delete("session", {
+		path: "/",
+		domain: `.${context.url.hostname}`
+	});
+	
+	// 设置多个过期的cookie来确保删除所有可能的变体
+	context.cookies.set("session", "", {
+		path: "/",
+		maxAge: 0,
+		expires: new Date(0)
+	});
+	
+	context.cookies.set("session", "", {
+		path: "/",
+		domain: context.url.hostname,
+		maxAge: 0,
+		expires: new Date(0)
+	});
+	
+	context.cookies.set("session", "", {
+		path: "/",
+		domain: `.${context.url.hostname}`,
+		maxAge: 0,
+		expires: new Date(0)
 	});
 }
 

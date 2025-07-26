@@ -1,8 +1,8 @@
-import {execSql, d1QueryFirst } from '@/lib/server/dbutil';
+import {execSql, d1QueryFirst, d1Query } from '@/lib/server/dbutil';
 import type { Website } from '@/types';
 
 export const selectWebsiteByUserIdSql = (db: D1Database, userId: string) => {
-  return d1QueryFirst(db,`SELECT * FROM websites WHERE user_id = ?`, [userId]);
+  return d1Query(db,`SELECT * FROM websites WHERE user_id = ?`, [userId]);
 }
 
 export const selectWebsiteByIdAndUserIdSql = (db: D1Database, websiteId: number, userId: string) => {

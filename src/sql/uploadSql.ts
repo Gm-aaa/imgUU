@@ -24,3 +24,11 @@ export const inserUploadSql = (db: D1Database, upload: Upload) => {
     [upload.userId, upload.websiteId, upload.originalFilename, upload.storedFilename, upload.fileType, upload.fileSize, upload.fileUrl]
   );
 }
+
+export const selectUploadByIdAndUserIdSql = (db: D1Database, uploadId: number, userId: string) => {
+  return db.prepare(`SELECT * FROM uploads WHERE id = ? AND user_id = ?`).bind(uploadId, userId).first();
+}
+
+export const deleteUploadSql = (db: D1Database, uploadId: number, userId: string) => {
+  return execSql(db, `DELETE FROM uploads WHERE id = ? AND user_id = ?`, [uploadId, userId]);
+}

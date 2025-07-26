@@ -1,0 +1,44 @@
+---
+import Header from '@/components/Header.astro';
+
+const user = Astro.locals.user;
+console.log('[DEBUG] debug-header page - user from Astro.locals:', user);
+console.log('[DEBUG] debug-header page - user type:', typeof user);
+---
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Header</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Header Debug Page</h1>
+    
+    <div class="debug-info">
+        <h3>User Object Debug Info:</h3>
+        <p><strong>User exists:</strong> {user ? 'Yes' : 'No'}</p>
+        <p><strong>User type:</strong> {typeof user}</p>
+        <p><strong>User value:</strong> {JSON.stringify(user)}</p>
+        {user && (
+            <div>
+                <p><strong>Username:</strong> {user.username}</p>
+                <p><strong>User ID:</strong> {user.id}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+            </div>
+        )}
+    </div>
+    
+    <h3>Header Component:</h3>
+    <Header user={user} />
+    
+    <div class="debug-info">
+        <h3>Expected Behavior:</h3>
+        <p>If user is logged in, should show "Admin (username)" button</p>
+        <p>If user is not logged in, should show "Login" button</p>
+    </div>
+</body>
+</html>

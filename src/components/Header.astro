@@ -1,19 +1,29 @@
 ---
 const { user } = Astro.props;
+console.log('[DEBUG] Header component - user prop:', user);
+console.log('[DEBUG] Header component - user type:', typeof user);
+console.log('[DEBUG] Header component - user truthy:', !!user);
+console.log('[DEBUG] Header component - user === null:', user === null);
+console.log('[DEBUG] Header component - user === undefined:', user === undefined);
+if (user) {
+  console.log('[DEBUG] Header component - user.username:', user.username);
+  console.log('[DEBUG] Header component - user.id:', user.id);
+}
+
+// 强制输出到错误日志以确保在生产环境中可见
+console.error('[FORCE DEBUG] Header component - user:', JSON.stringify(user));
+console.error('[FORCE DEBUG] Header component - should show admin:', !!(user && user.username));
 ---
 
 <div class="bg-white w-full max-w-7xl mb-4 p-4 rounded-lg shadow-md flex justify-between items-center">
   <a href="/" class="text-2xl font-bold text-blue-600 hover:text-blue-800">ImgUU</a> 
   <div class="text-center">
     {
-      !user && (
+      (user === null || user === undefined || !user) ? (
         <a href="/login">
           <button class="px-4 py-2 mx-2 w-28 sm:w-28 md:w-20 lg:w-16 xl:w-16 2xl:w-20 bg-blue-500 text-white rounded cursor-pointer">Login</button>
         </a>
-      )
-    }
-    {
-      user && (
+      ) : (
         <a href="/admin">
           <button class="px-4 py-2 mx-2 w-28 sm:w-28 md:w-20 lg:w-16 xl:w-16 2xl:w-20 bg-blue-500 text-white rounded cursor-pointer">Admin</button>
         </a>
