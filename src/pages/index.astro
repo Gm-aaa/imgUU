@@ -75,6 +75,24 @@ if (user) {
         </div>
       </div>
 
+      <!-- URL Upload -->
+      <div class="w-full mt-4 flex gap-2">
+        <input
+          type="text"
+          x-model="imageUrl"
+          placeholder="输入图片URL"
+          class="flex-1 p-2 border rounded"
+        />
+        <button
+          @click="handleUrlUpload"
+          :class="{'pointer-events-none opacity-50': uploading}"
+          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+        >
+          <i class="fas fa-link mr-2"></i>
+          URL上传
+        </button>
+      </div>
+
       <!-- Controls -->
       <div class="w-full rounded-md shadow-sm overflow-hidden mt-4 grid grid-cols-8">
         <div class="md:col-span-1 col-span-8">
@@ -189,6 +207,81 @@ if (user) {
       uploading: false,
       websiteId: "",
       boxType: "img",
+      imageUrl: "",
+
+      async handleUrlUpload() {
+        if (this.websiteId === "") {
+          Toastify({
+            text: "请先选择一个网站配置",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+          return;
+        }
+
+        if (!this.imageUrl) {
+          Toastify({
+            text: "请输入图片URL",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+          return;
+        }
+
+        this.uploading = true;
+        try {
+          const response = await fetch("/api/url-upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: this.imageUrl,
+              websiteId: this.websiteId
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              this.uploadedImages.push({
+                name: this.imageUrl.split("/").pop() || "url-upload",
+                url: data.imageUrl
+              });
+              this.imageUrl = "";
+              Toastify({
+                text: "上传成功",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "#22c55e",
+              }).showToast();
+            }
+          } else {
+            const error = await response.json();
+            throw new Error(error.error || "Upload failed");
+          }
+        } catch (error) {
+          console.error(error);
+          Toastify({
+            text: `上传失败: ${error.message}`,
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#ef4444",
+          }).showToast();
+        } finally {
+          this.uploading = false;
+        }
+      },
       handleFileChange(event) {
         const newFiles = Array.from(event.target.files);
         const filteredFiles = newFiles.filter((file) => !this.selectedFiles.find((selFile) => selFile.name === file.name));
